@@ -2,11 +2,11 @@
 This is a [PyTorch](https://github.com/pytorch/pytorch)
 implementation of Light-Head R-CNN for object detection. 
 This project is mainly based on [faster_rcnn_pytorch](https://github.com/longcw/faster_rcnn_pytorch)
-and [PyTorch F-RCN](https://github.com/PureDiors/pytorch_RFCN)
+and [PyTorch R-FCN](https://github.com/PureDiors/pytorch_RFCN)
 
 For details about Light-Head R-CNN please refer to the [paper](https://arxiv.org/pdf/1711.07264)
-R-FCN: Object Detection via Region-based Fully Convolutional Networks
-by Jifeng Dai, Yi Li, Kaiming He, Jian Sun.
+Light-Head R-CNN: In Defense of Two-Stage Object Detector
+by Zeming Li, Chao Peng, Gang Yu, Xiangyu Zhang, Yangdong Deng, Jian Sun.
 
 ### Installation
 1. Clone the this repository
