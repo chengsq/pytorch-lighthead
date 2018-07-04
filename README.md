@@ -247,7 +247,7 @@ CUDA_VISIBLE_DEVICES=$GPU_ID python trainval_net.py \
 
 --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
 
---cuda -- lighthead
+--cuda --lighthead
 
 ```
 
@@ -263,7 +263,7 @@ CUDA_VISIBLE_DEVICES=$GPU_ID python trainval_net.py \
 
 --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
 
---cuda -- lighthead
+--cuda --lighthead
 
 ```
 
@@ -281,7 +281,7 @@ python trainval_net.py --dataset pascal_voc --net vgg16 \
 
 --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
 
---cuda --mGPUs -- lighthead
+--cuda --mGPUs --lighthead
 
   
 
@@ -305,7 +305,7 @@ python test_net.py --dataset pascal_voc --net vgg16 \
 
 --checksession $SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
 
---cuda -- lighthead
+--cuda --lighthead
 
 ```
 
