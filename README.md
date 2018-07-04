@@ -380,7 +380,7 @@ The demo is stopped by clicking the image window and then pressing the 'q' key.
 
   
 
-@article{jjfaster2rcnn,
+@article{https://arxiv.org/pdf/1711.07264},
 
 Author = {Zeming Li , Chao Peng , Gang Yu , Xiangyu Zhang , Yangdong Deng , Jian Sun},
 
