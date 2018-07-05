@@ -18,4 +18,8 @@ def nms(dets, thresh, force_cpu=False):
     # original: return gpu_nms(dets, thresh, device_id=cfg.GPU_ID)
     # ---pytorch version---
 
-    return nms_gpu(dets, thresh) if force_cpu == False else nms_cpu(dets, thresh)
+    # Force nms_gpu Compile check
+    try:
+        return nms_gpu(dets, thresh) if force_cpu == False else nms_cpu(dets, thresh)
+    except NameError:
+        return nms_cpu(dets, thresh)

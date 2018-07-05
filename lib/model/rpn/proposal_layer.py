@@ -124,6 +124,9 @@ class _ProposalLayer(nn.Module):
         proposals_keep = proposals
         _, order = torch.sort(scores_keep, 1, True)
 
+        # Config GPU usage check
+        device = torch.device("cuda" if cfg.USE_GPU_NMS else "cpu")
+
         output = scores.new(batch_size, post_nms_topN, 5).zero_()
         for i in range(batch_size):
             # # 3. remove predicted boxes with either height or width < threshold
@@ -145,7 +148,8 @@ class _ProposalLayer(nn.Module):
             # 7. take after_nms_topN (e.g. 300)
             # 8. return the top proposals (-> RoIs top)
 
-            keep_idx_i = nms(torch.cat((proposals_single, scores_single), 1), nms_thresh, force_cpu=not cfg.USE_GPU_NMS)
+            # Implementing CPU Mode
+            keep_idx_i = nms(torch.cat((proposals_single, scores_single), 1).to(device), nms_thresh, force_cpu=not cfg.USE_GPU_NMS)
             keep_idx_i = keep_idx_i.long().view(-1)
 
             if post_nms_topN > 0:

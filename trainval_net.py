@@ -232,11 +232,12 @@ if __name__ == '__main__':
     gt_boxes = torch.FloatTensor(1)
 
     # ship to cuda
-    if args.cuda:
-        im_data = im_data.cuda()
-        im_info = im_info.cuda()
-        num_boxes = num_boxes.cuda()
-        gt_boxes = gt_boxes.cuda()
+    device = torch.device("cuda" if args.cuda else "cpu")
+
+    im_data = im_data.to(device)
+    im_info = im_info.to(device)
+    num_boxes = num_boxes.to(device)
+    gt_boxes = gt_boxes.to(device)
 
     # make variable
     im_data = Variable(im_data)
@@ -303,8 +304,7 @@ if __name__ == '__main__':
     if args.mGPUs:
         fasterRCNN = nn.DataParallel(fasterRCNN)
 
-    if args.cuda:
-        fasterRCNN.cuda()
+    fasterRCNN = fasterRCNN.to(device)
 
     iters_per_epoch = int(train_size / args.batch_size)
 
@@ -327,6 +327,7 @@ if __name__ == '__main__':
             num_boxes.data.resize_(data[3].size()).copy_(data[3])
 
             fasterRCNN.zero_grad()
+            time_measure, \
             rois, cls_prob, bbox_pred, \
             rpn_loss_cls, rpn_loss_box, \
             RCNN_loss_cls, RCNN_loss_bbox, \
@@ -366,6 +367,8 @@ if __name__ == '__main__':
                 print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                       % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
                 print("\t\t\tfg/bg=(%d/%d), time cost: %.3f sec" % (fg_cnt, bg_cnt, end - start))
+                print("\t\tTime Details: RPN: %.3f, RoI: %.3f, Subnet: %.3f" \
+                      % (time_measure[0], time_measure[1], time_measure[2]))
                 print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
                       % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
                 if args.use_tfboard:

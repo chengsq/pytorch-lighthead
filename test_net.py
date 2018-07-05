@@ -20,7 +20,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
-import torch._utils as utils
+# import torch._utils as utils
 import pickle
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader
@@ -39,7 +39,8 @@ try:
 except NameError:
     xrange = range  # Python 3
 
-# Supporting older version models for PyTorch
+"""
+# Support older version models for PyTorch
 try:
   utils._rebuild_tensor_v2
   _v2_flag = False
@@ -51,6 +52,7 @@ except AttributeError:
     return tensor
   utils._rebuild_tensor_v2 = _rebuild_tensor_v2
   _v2_flag = True
+"""
 
 def parse_args():
   """
@@ -111,6 +113,7 @@ def parse_args():
   args = parser.parse_args()
   return args
 
+
 lr = cfg.TRAIN.LEARNING_RATE
 momentum = cfg.TRAIN.MOMENTUM
 weight_decay = cfg.TRAIN.WEIGHT_DECAY
@@ -170,6 +173,9 @@ if __name__ == '__main__':
   load_name = os.path.join(input_dir,
     'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
+  # (PyTorch 0.4.0 Feature) Auto GPU/CPU management
+  device = torch.device("cuda" if args.cuda else "cpu")
+
   # lighthead use check
   if args.lighthead:
     lighthead = True
@@ -190,10 +196,15 @@ if __name__ == '__main__':
   fasterRCNN.create_architecture()
 
   print("load checkpoint %s" % (load_name))
-  checkpoint = torch.load(load_name)
+  if args.cuda:
+    checkpoint = torch.load(load_name)
+  else:
+    checkpoint = torch.load(load_name, map_location=lambda storage, loc: storage)    # Load all tensors onto the CPU
   fasterRCNN.load_state_dict(checkpoint['model'])
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']
+
+  print(checkpoint)
 
 
   print('load model successfully!')
@@ -203,31 +214,23 @@ if __name__ == '__main__':
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
 
-  # ship to cuda
-  if args.cuda:
-    im_data = im_data.cuda()
-    im_info = im_info.cuda()
-    num_boxes = num_boxes.cuda()
-    gt_boxes = gt_boxes.cuda()
+  # CUDA management
+  im_data = im_data.to(device)
+  im_info = im_info.to(device)
+  num_boxes = num_boxes.to(device)
+  gt_boxes = gt_boxes.to(device)
 
-  # make variable
-  if _v2_flag:
-    im_data = Variable(im_data, volatile=True)
-    im_info = Variable(im_info, volatile=True)
-    num_boxes = Variable(num_boxes, volatile=True)
-    gt_boxes = Variable(gt_boxes, volatile=True)
-  else:
-    with torch.no_grad():
-      im_data = Variable(im_data)     # volatile flag is now deprecated in PyTorch 0.4.0.
-      im_info = Variable(im_info)
-      num_boxes = Variable(num_boxes)
-      gt_boxes = Variable(gt_boxes)
+  # make variable (PyTorch 0.4.0+)
+  with torch.no_grad():
+    im_data = Variable(im_data)     # volatile flag is now deprecated in PyTorch 0.4.0.
+    im_info = Variable(im_info)
+    num_boxes = Variable(num_boxes)
+    gt_boxes = Variable(gt_boxes)
 
   if args.cuda:
     cfg.CUDA = True
 
-  if args.cuda:
-    fasterRCNN.cuda()
+  fasterRCNN.to(device)
 
   start = time.time()
   max_per_image = 100
@@ -267,6 +270,7 @@ if __name__ == '__main__':
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
 
       det_tic = time.time()
+      time_measure, \
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
@@ -281,12 +285,12 @@ if __name__ == '__main__':
           if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
           # Optionally normalize targets by a precomputed mean and stdev
             if args.class_agnostic:
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(device) \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(device)
                 box_deltas = box_deltas.view(args.batch_size, -1, 4)
             else:
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(device) \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(device)
                 box_deltas = box_deltas.view(args.batch_size, -1, 4 * len(imdb.classes))
 
           pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
@@ -295,7 +299,7 @@ if __name__ == '__main__':
           # Simply repeat the boxes, once for each class
           pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-      pred_boxes /= data[1][0][2]
+      pred_boxes /= data[1][0][2].to(device)
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()
@@ -340,8 +344,8 @@ if __name__ == '__main__':
       misc_toc = time.time()
       nms_time = misc_toc - misc_tic
 
-      sys.stdout.write('im_detect: {:d}/{:d}\tDetect TIME: {:.3f}s\tNMS TIME: {:.3f}s   \r' \
-          .format(i + 1, num_images, detect_time, nms_time))
+      sys.stdout.write('im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.2f}s, RoI: {:.2f}s, Subnet: {:.2f}s)\tNMS: {:.3f}s   \r' \
+          .format(i + 1, num_images, detect_time, time_measure[0], time_measure[1], time_measure[2], nms_time))
       sys.stdout.flush()
 
       if vis:
