@@ -78,6 +78,8 @@ However, our implementation has several unique and new features compared with th
 
 - [x] Support both python2 and python3 (great thanks to [cclauss](https://github.com/cclauss)).
 
+- [ ] Implement Xceptional-like backbone network. (Coming soon...)
+
 - [ ] ~~Add deformable pooling layer as an alternative way for roi pooling (mainly supported by [Xander](https://github.com/xanderchf))~~ Don't know when.
 
 - [ ] ~~Run systematical experiments on PASCAL VOC 07/12, COCO, ImageNet, Visual Genome (VG) with different settings.~~
