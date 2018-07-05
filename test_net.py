@@ -20,6 +20,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
+
 # import torch._utils as utils
 import pickle
 from roi_data_layer.roidb import combined_roidb
@@ -204,9 +205,6 @@ if __name__ == '__main__':
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']
 
-  print(checkpoint)
-
-
   print('load model successfully!')
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
@@ -231,7 +229,7 @@ if __name__ == '__main__':
     cfg.CUDA = True
 
   fasterRCNN.to(device)
-
+  
   start = time.time()
   max_per_image = 100
 
