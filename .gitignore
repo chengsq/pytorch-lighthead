@@ -2,4 +2,5 @@
 output
 models
 result_logs
+logs
 __pycache__
