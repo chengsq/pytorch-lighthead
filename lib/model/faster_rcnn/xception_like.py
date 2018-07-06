@@ -143,7 +143,7 @@ class Xception(nn.Module):
 
 
 class xception(_fasterRCNN):
-    def __init__(self, classes, class_agnostic=False, lighthead=False):
+    def __init__(self, classes, class_agnostic=False, lighthead=True):
         self.dout_base_model = 512
         self.class_agnostic = class_agnostic
 
