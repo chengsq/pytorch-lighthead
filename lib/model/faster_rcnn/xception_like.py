@@ -144,7 +144,7 @@ class Xception(nn.Module):
 
 class xception(_fasterRCNN):
     def __init__(self, classes, class_agnostic=False, lighthead=True):
-        self.dout_base_model = 512
+        self.dout_base_model = 576      # Output channel at Stage4
         self.class_agnostic = class_agnostic
 
         _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, setting='S')

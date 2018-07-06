@@ -21,14 +21,13 @@ class _fasterRCNN(nn.Module):
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
         self.lighthead = lighthead
-        self.setting = setting
-        
+
         # loss
         self.RCNN_loss_cls = 0
         self.RCNN_loss_bbox = 0
 
         # define rpn
-        self.RCNN_rpn = _RPN(self.dout_base_model, self.lighthead, self.setting)
+        self.RCNN_rpn = _RPN(self.dout_base_model, self.lighthead, setting=setting)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
