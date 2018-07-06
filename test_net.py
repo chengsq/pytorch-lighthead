@@ -32,6 +32,7 @@ from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
+from model.faster_rcnn.xception_like import xception
 
 import pdb
 
@@ -190,6 +191,9 @@ if __name__ == '__main__':
     fasterRCNN = resnet(imdb.classes, 50, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res152':
     fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'xception':
+    fasterRCNN = xception(imdb.classes, class_agnostic=args.class_agnostic, lighthead=lighthead)
+
   else:
     print("network is not defined")
     pdb.set_trace()
