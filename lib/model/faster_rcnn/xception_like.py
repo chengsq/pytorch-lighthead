@@ -147,7 +147,7 @@ class xception(_fasterRCNN):
         self.dout_base_model = 512
         self.class_agnostic = class_agnostic
 
-        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
+        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, setting='S')
 
     def _init_modules(self):
         xception = Xception()

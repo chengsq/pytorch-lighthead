@@ -15,7 +15,7 @@ from .proposal_layer import _ProposalLayer
 class _RPN(nn.Module):
     """ region proposal network """
 
-    def __init__(self, din, lighthead):
+    def __init__(self, din, lighthead, setting='L'):
         super(_RPN, self).__init__()
 
         self.din = din  # get depth of input feature map, e.g., 512
@@ -23,20 +23,21 @@ class _RPN(nn.Module):
         self.anchor_ratios = cfg.ANCHOR_RATIOS
         self.feat_stride = cfg.FEAT_STRIDE[0]
         self.lighthead = lighthead
+        c_mid = 64 if setting == 'S' else 256
 
         # define the convrelu layers processing input feature map
         if self.lighthead:
             dim_out = 10 * 7 * 7
             k_size = 15     # kernel_size
             p_size = k_size // 2        # padding size
-            self.block1_1 = nn.Conv2d(self.din, 256, (k_size, 1), 1, padding=(p_size, 0))
-            self.bn1_1 = nn.BatchNorm2d(256)
-            self.block1_2 = nn.Conv2d(256, dim_out, (1, k_size), 1, padding=(0, p_size))
+            self.block1_1 = nn.Conv2d(self.din, c_mid, (k_size, 1), 1, padding=(p_size, 0))
+            self.bn1_1 = nn.BatchNorm2d(c_mid)
+            self.block1_2 = nn.Conv2d(c_mid, dim_out, (1, k_size), 1, padding=(0, p_size))
             self.bn1_2 = nn.BatchNorm2d(dim_out)
 
-            self.block2_1 = nn.Conv2d(self.din, 256, (1, k_size), 1, padding=(0, p_size))
-            self.bn2_1 = nn.BatchNorm2d(256)
-            self.block2_2 = nn.Conv2d(256, dim_out, (k_size, 1), 1, padding=(p_size, 0))
+            self.block2_1 = nn.Conv2d(self.din, c_mid, (1, k_size), 1, padding=(0, p_size))
+            self.bn2_1 = nn.BatchNorm2d(c_mid)
+            self.block2_2 = nn.Conv2d(c_mid, dim_out, (k_size, 1), 1, padding=(p_size, 0))
             self.bn2_2 = nn.BatchNorm2d(dim_out)
         else:
             dim_out = 512
