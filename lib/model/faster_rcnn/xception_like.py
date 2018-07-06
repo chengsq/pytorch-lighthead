@@ -92,7 +92,7 @@ class Xception(nn.Module):
         
         self.num_classes = num_classes
 
-        self.conv1 = nn.Conv2d(3, 24, kernel_size=3, stride=2, padding=0, bias=False)      # 224 x 224 -> 112 x 112
+        self.conv1 = nn.Conv2d(3, 24, kernel_size=3, stride=2, padding=1, bias=False)      # 224 x 224 -> 112 x 112
         self.bn1 = nn.BatchNorm2d(24)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True)     # -> 56 x 56
