@@ -9,7 +9,7 @@ from xception_like import xception
 
 import numpy as np
 
-def print_model_parm_flops():
+def flops():
 
     # prods = {}
     # def save_prods(self, input, output):
