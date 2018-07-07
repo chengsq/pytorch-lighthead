@@ -68,7 +68,7 @@ def parse_args():
                       help='optional config file',
                       default='cfgs/res101_ls.yml', type=str)
   parser.add_argument('--net', dest='net',
-                      help='vgg16, res50, res101, res152',
+                      help='vgg16, res50, res101, res152, xception',
                       default='res101', type=str)
   parser.add_argument('--set', dest='set_cfgs',
                       help='set config keys', default=None,
@@ -232,7 +232,7 @@ if __name__ == '__main__':
   if args.cuda:
     cfg.CUDA = True
 
-  fasterRCNN.to(device)
+  fasterRCNN = fasterRCNN.to(device)
   
   start = time.time()
   max_per_image = 100

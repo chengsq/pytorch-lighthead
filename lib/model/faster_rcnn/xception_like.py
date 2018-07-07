@@ -49,21 +49,18 @@ class Block(nn.Module):
 
         if grow_first:
             rep.append(self.relu)
-            # rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
-            rep.append(nn.Conv2d(in_filters, out_filters, 3, stride=strides, padding=1, groups=in_filters, bias=False))
+            rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
             rep.append(nn.BatchNorm2d(out_filters))
             filters = out_filters
 
         for i in range(reps-1):
             rep.append(self.relu)
-            # rep.append(SeparableConv2d(filters,filters,3,stride=1,padding=1,bias=False))
-            rep.append(nn.Conv2d(filters, filters, 3, stride=1, padding=1, groups=filters, bias=False))
+            rep.append(SeparableConv2d(filters,filters,3,stride=1,padding=1,bias=False))
             rep.append(nn.BatchNorm2d(filters))
         
         if not grow_first:
             rep.append(self.relu)
-            # rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
-            rep.append(nn.Conv2d(in_filters, out_filters, 3, stride=strides, padding=1, groups=in_filters, bias=False))
+            rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
             rep.append(nn.BatchNorm2d(out_filters))
 
         if not start_with_relu:
