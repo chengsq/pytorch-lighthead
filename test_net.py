@@ -34,6 +34,7 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from model.faster_rcnn.xception_like import xception
 from model.faster_rcnn.squeezenet import squeezenet
+from model.faster_rcnn.mobilenet import mobilenetv2
 
 import pdb
 
