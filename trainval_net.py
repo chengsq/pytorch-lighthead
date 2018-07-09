@@ -35,6 +35,7 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from model.faster_rcnn.xception_like import xception
 from model.faster_rcnn.squeezenet import squeezenet
+from model.faster_rcnn.mobilenet import mobilenetv2
 
 
 def parse_args():
@@ -276,6 +277,8 @@ if __name__ == '__main__':
         fasterRCNN = squeezenet(imdb.classes, version='1_0', pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
     elif args.net == 'squeeze1_1':
         fasterRCNN = squeezenet(imdb.classes, version='1_1', pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    elif args.net == 'mobilenet':
+        fasterRCNN = mobilenetv2(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
     else:
         print("network is not defined")

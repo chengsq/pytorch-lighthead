@@ -146,17 +146,9 @@ class mobilenetv2(_fasterRCNN):
         else:
             self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
-        # Fix blocks
-        for p in self.RCNN_base[0].parameters(): p.requires_grad=False
-        for p in self.RCNN_base[1].parameters(): p.requires_grad=False
-
-        assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
-        if cfg.RESNET.FIXED_BLOCKS >= 3:
-            for p in self.RCNN_base[6].parameters(): p.requires_grad=False
-        if cfg.RESNET.FIXED_BLOCKS >= 2:
-            for p in self.RCNN_base[5].parameters(): p.requires_grad=False
-        if cfg.RESNET.FIXED_BLOCKS >= 1:
-            for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+        # Fix blocks before last 2 Blocks
+        for layer in range(5):
+            for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
         def set_bn_fix(m):
             classname = m.__class__.__name__
@@ -184,9 +176,6 @@ class mobilenetv2(_fasterRCNN):
         self.RCNN_top.apply(set_bn_eval)
 
     def _head_to_tail(self, pool5):
-        if self.lighthead:
-            pool5 = pool5.view(pool5.size(0), -1)
-            fc7 = self.RCNN_top(pool5)
-        else:
-            fc7 = self.RCNN_top(pool5).mean(3).mean(2)    # or two large fully-connected layers
+        pool5_flat = pool5.view(pool5.size(0), -1)
+        fc7 = self.RCNN_top(pool5_flat)    # or two large fully-connected layers
         return fc7

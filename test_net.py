@@ -198,6 +198,8 @@ if __name__ == '__main__':
     fasterRCNN = squeezenet(imdb.classes, version='1_0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'squeeze1_1':
     fasterRCNN = squeezenet(imdb.classes, version='1_1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'mobilenet':
+    fasterRCNN = mobilenetv2(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
   else:
     print("network is not defined")
