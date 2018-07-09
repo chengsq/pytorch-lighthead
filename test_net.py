@@ -192,7 +192,7 @@ if __name__ == '__main__':
   elif args.net == 'res152':
     fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'xception':
-    fasterRCNN = xception(imdb.classes, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    fasterRCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
   else:
     print("network is not defined")

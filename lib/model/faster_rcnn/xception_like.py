@@ -143,9 +143,10 @@ class Xception(nn.Module):
 
 
 class xception(_fasterRCNN):
-    def __init__(self, classes, class_agnostic=False, lighthead=True):
+    def __init__(self, classes, pretrained=False, class_agnostic=False, lighthead=True):
         self.dout_base_model = 576      # Output channel at Stage4
         self.class_agnostic = class_agnostic
+        self.pretrained = pretrained
 
         _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, setting='S')
 
@@ -165,24 +166,25 @@ class xception(_fasterRCNN):
             self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
         # Fix blocks
-        for p in self.RCNN_base[0].parameters(): p.requires_grad=False
-        for p in self.RCNN_base[1].parameters(): p.requires_grad=False
+        if self.pretrained:
+            for p in self.RCNN_base[0].parameters(): p.requires_grad=False
+            for p in self.RCNN_base[1].parameters(): p.requires_grad=False
 
-        assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
-        if cfg.RESNET.FIXED_BLOCKS >= 3:
-            for p in self.RCNN_base[6].parameters(): p.requires_grad=False
-        if cfg.RESNET.FIXED_BLOCKS >= 2:
-            for p in self.RCNN_base[5].parameters(): p.requires_grad=False
-        if cfg.RESNET.FIXED_BLOCKS >= 1:
-            for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+            assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
+            if cfg.RESNET.FIXED_BLOCKS >= 3:
+                for p in self.RCNN_base[6].parameters(): p.requires_grad=False
+            if cfg.RESNET.FIXED_BLOCKS >= 2:
+                for p in self.RCNN_base[5].parameters(): p.requires_grad=False
+            if cfg.RESNET.FIXED_BLOCKS >= 1:
+                for p in self.RCNN_base[4].parameters(): p.requires_grad=False
 
-        def set_bn_fix(m):
-            classname = m.__class__.__name__
-            if classname.find('BatchNorm') != -1:
-                for p in m.parameters(): p.requires_grad=False
+            def set_bn_fix(m):
+                classname = m.__class__.__name__
+                if classname.find('BatchNorm') != -1:
+                    for p in m.parameters(): p.requires_grad=False
 
-        self.RCNN_base.apply(set_bn_fix)
-        self.RCNN_top.apply(set_bn_fix)
+            self.RCNN_base.apply(set_bn_fix)
+            self.RCNN_top.apply(set_bn_fix)
 
     def train(self, mode=True):
         # Override train so that the training mode is set as we want
