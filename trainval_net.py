@@ -370,10 +370,10 @@ if __name__ == '__main__':
 
                 print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                       % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-                print("\t\t\tfg/bg=(%d/%d), time cost: %.3f sec" % (fg_cnt, bg_cnt, end - start))
-                print("\t\t\tTime Details: RPN: %.3f, RoI: %.3f, Subnet: %.3f" \
+                print("\t\tfg/bg=(%d/%d), time cost: %.3f sec" % (fg_cnt, bg_cnt, end - start))
+                print("\t\tTime Details: RPN: %.3f, RoI: %.3f, Subnet: %.3f" \
                       % (time_measure[0], time_measure[1], time_measure[2]))
-                print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
+                print("\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
                       % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
                 if args.use_tfboard:
                     info = {
