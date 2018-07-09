@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import _init_paths
 import os
+import errno
 import sys
 import numpy as np
 import argparse
@@ -33,6 +34,7 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from model.faster_rcnn.xception_like import xception
+from model.faster_rcnn.squeezenet import squeezenet
 
 
 def parse_args():
@@ -164,7 +166,14 @@ if __name__ == '__main__':
         from model.utils.logger import Logger
 
         # Set the logger
-        logger = Logger('./logs')
+        logdir = './logs/Session_{}'.format(args.session)
+        if not os.path.exists(logdir):
+            try:
+                os.makedirs(logdir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+        logger = Logger(logdir)
 
     if args.dataset == "pascal_voc":
         args.imdb_name = "voc_2007_trainval"
@@ -263,6 +272,10 @@ if __name__ == '__main__':
         fasterRCNN = resnet(imdb.classes, 152, pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
     elif args.net == 'xception':
         fasterRCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    elif args.net == 'squeezenet1.0':
+        fasterRCNN = squeezenet(imdb.classes, version='1.0', pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    elif args.net == 'squeezenet1.1':
+        fasterRCNN = squeezenet(imdb.classes, version='1.1', pretrained=True, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
     else:
         print("network is not defined")

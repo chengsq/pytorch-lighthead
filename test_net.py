@@ -33,6 +33,7 @@ from model.utils.net_utils import save_net, load_net, vis_detections
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from model.faster_rcnn.xception_like import xception
+from model.faster_rcnn.squeezenet import squeezenet
 
 import pdb
 
@@ -193,6 +194,10 @@ if __name__ == '__main__':
     fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'xception':
     fasterRCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeezenet1.0':
+    fasterRCNN = squeezenet(imdb.classes, version='1.0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeezenet1.1':
+    fasterRCNN = squeezenet(imdb.classes, version='1.1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
   else:
     print("network is not defined")
@@ -346,7 +351,7 @@ if __name__ == '__main__':
       misc_toc = time.time()
       nms_time = misc_toc - misc_tic
 
-      sys.stdout.write('im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.2f}s, RoI: {:.2f}s, Subnet: {:.2f}s)\tNMS: {:.3f}s   \r' \
+      sys.stdout.write('im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s   \r' \
           .format(i + 1, num_images, detect_time, time_measure[0], time_measure[1], time_measure[2], nms_time))
       sys.stdout.flush()
 
