@@ -156,7 +156,7 @@ class xception(_fasterRCNN):
     def _init_modules(self):
         xception = Xception()
 
-        # Build resnet.
+        # Build xception-like network.
         self.RCNN_base = nn.Sequential(xception.conv1, xception.bn1,xception.relu,
             xception.maxpool,xception.block1,xception.block2,xception.block3)
 
