@@ -194,10 +194,10 @@ if __name__ == '__main__':
     fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'xception':
     fasterRCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
-  elif args.net == 'squeezenet1.0':
-    fasterRCNN = squeezenet(imdb.classes, version='1.0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
-  elif args.net == 'squeezenet1.1':
-    fasterRCNN = squeezenet(imdb.classes, version='1.1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeeze1_0':
+    fasterRCNN = squeezenet(imdb.classes, version='1_0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeeze1_1':
+    fasterRCNN = squeezenet(imdb.classes, version='1_1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
   else:
     print("network is not defined")

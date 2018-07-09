@@ -18,7 +18,7 @@ import pdb
 
 class squeezenet(_fasterRCNN):
   def __init__(self, classes, version, pretrained=False, class_agnostic=False, lighthead=False):
-    self.model_path = 'data/pretrained_model/vgg16_caffe.pth'
+    self.model_path = 'data/pretrained_model/squeezenet{}.pth'.format(version)
     self.dout_base_model = 512
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
@@ -27,9 +27,9 @@ class squeezenet(_fasterRCNN):
     _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
 
   def _init_modules(self):
-    if self.version == '1.0':
+    if self.version == '1_0':
         squeezenet = models.squeezenet1_0()
-    elif self.version == '1.1':
+    elif self.version == '1_1':
         squeezenet = models.squeezenet1_1()
     if self.pretrained:
         print("Loading pretrained weights from %s" %(self.model_path))
