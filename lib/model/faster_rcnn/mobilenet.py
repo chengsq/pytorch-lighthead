@@ -114,8 +114,8 @@ class MobileNetV2(nn.Module):
 
 class mobilenetv2(_fasterRCNN):
     def __init__(self, classes, pretrained=False, class_agnostic=False, lighthead=False):
-        self.model_path = 'data/pretrained_model/mobilenet_v2.pth'
-        self.dout_base_model = 1024
+        self.model_path = 'data/pretrained_model/mobilenet_v2.pth.tar'
+        self.dout_base_model = 320
         self.pretrained = pretrained
         self.class_agnostic = class_agnostic
 
@@ -126,8 +126,18 @@ class mobilenetv2(_fasterRCNN):
 
         if self.pretrained == True:
             print("Loading pretrained weights from %s" %(self.model_path))
-            state_dict = torch.load(self.model_path)
-            mobilenet.load_state_dict({k:v for k,v in state_dict.items() if k in mobilenet.state_dict()})
+            if torch.cuda.is_available():
+                state_dict = torch.load(self.model_path)
+            else:
+                state_dict = torch.load(self.model_path, map_location=lambda storage, loc: storage)
+
+            from collections import OrderedDict
+            new_state_dict = OrderedDict()
+            for k,v in state_dict.items():
+                name = k[7:]        # remove 'module.'
+                new_state_dict[name] = v
+
+            mobilenet.load_state_dict({k:v for k,v in new_state_dict.items() if k in mobilenet.state_dict()})
 
         
         # Build mobilenet.
@@ -138,11 +148,11 @@ class mobilenetv2(_fasterRCNN):
             for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
         if self.lighthead:
-            self.RCNN_top = nn.Sequential(nn.Linear(1280 * 7 * 7, 2048), nn.ReLU(inplace=True))
+            self.RCNN_top = nn.Sequential(nn.Linear(320 * 7 * 7, 2048), nn.ReLU(inplace=True))
         else:
             self.RCNN_top = nn.Sequential(*list(mobilenet.features._modules.values())[-2:-1])
 
-        c_in = 2048 if self.lighthead else 1280
+        c_in = 2048 if self.lighthead else 320
 
         self.RCNN_cls_score = nn.Linear(c_in, self.n_classes)
         if self.class_agnostic:
@@ -155,5 +165,6 @@ class mobilenetv2(_fasterRCNN):
             pool5_flat = pool5.view(pool5.size(0), -1)
             fc7 = self.RCNN_top(pool5_flat)    # or two large fully-connected layers
         else:
+            print(pool5.shape)
             fc7 = self.RCNN_top(pool5)
         return fc7

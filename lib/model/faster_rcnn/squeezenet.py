@@ -34,7 +34,10 @@ class squeezenet(_fasterRCNN):
         squeezenet = models.squeezenet1_1()
     if self.pretrained:
         print("Loading pretrained weights from %s" %(self.model_path))
-        state_dict = torch.load(self.model_path)
+        if torch.cuda.is_available():
+          state_dict = torch.load(self.model_path, map_location=lambda storage, loc: storage)
+        else:
+          state_dict = torch.load(self.model_path)
         squeezenet.load_state_dict({k:v for k,v in state_dict.items() if k in squeezenet.state_dict()})
 
     squeezenet.classifier = nn.Sequential(*list(squeezenet.classifier._modules.values())[:-1])
