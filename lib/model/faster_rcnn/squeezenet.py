@@ -22,6 +22,7 @@ class squeezenet(_fasterRCNN):
     self.dout_base_model = 512
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
+    self.lighthead = lighthead
     self.version = version
 
     _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
@@ -36,26 +37,30 @@ class squeezenet(_fasterRCNN):
         state_dict = torch.load(self.model_path)
         squeezenet.load_state_dict({k:v for k,v in state_dict.items() if k in squeezenet.state_dict()})
 
-    squeezenet.classifier = nn.Sequential(*list(squeezenet.classifier._modules.values()))
+    squeezenet.classifier = nn.Sequential(*list(squeezenet.classifier._modules.values())[:-1])
 
     # not using the last maxpool layer
     self.RCNN_base = nn.Sequential(*list(squeezenet.features._modules.values()))
 
-    # Fix the layers before conv3:
-    for layer in range(10):
+    # Fix Layers
+    for layer in range(len(self.RCNN_base)):
       for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
     # self.RCNN_base = _RCNN_base(vgg.features, self.classes, self.dout_base_model)
+    if self.lighthead:
+      self.RCNN_top = nn.Sequential(nn.Linear(512 * 7 * 7, 2048), nn.ReLU(inplace=True))
+    else:
+      self.RCNN_top = squeezenet.classifier
 
-    self.RCNN_top = nn.Sequential(nn.Linear(512 * 7 * 7, 2048), nn.ReLU(inplace=True))
+    c_in = 2048 if self.lighthead else 512
 
     # not using the last maxpool layer
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.RCNN_cls_score = nn.Linear(c_in, self.n_classes)
 
     if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
+      self.RCNN_bbox_pred = nn.Linear(c_in, 4)
     else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+      self.RCNN_bbox_pred = nn.Linear(c_in, 4 * self.n_classes)
 
   def _head_to_tail(self, pool5):
     pool5_flat = pool5.view(pool5.size(0), -1)

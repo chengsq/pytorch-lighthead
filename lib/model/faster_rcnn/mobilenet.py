@@ -129,53 +129,31 @@ class mobilenetv2(_fasterRCNN):
             state_dict = torch.load(self.model_path)
             mobilenet.load_state_dict({k:v for k,v in state_dict.items() if k in mobilenet.state_dict()})
 
-        mobilenet.classifier = nn.Sequential(*list(vgg.classifier._modules.values())[:-1])
         
         # Build mobilenet.
-        self.RCNN_base = nn.Sequential(mobilenet.conv1, mobilenet.bn1,mobilenet.relu,
-            mobilenet.maxpool,mobilenet.layer1,mobilenet.layer2,mobilenet.layer3)
+        self.RCNN_base = nn.Sequential(*list(mobilenet.features._modules.values())[:-2])
 
-        if self.lighthead:
-            self.RCNN_top = nn.Sequential(nn.Linear(1024 * 7 * 7, 2048), nn.ReLU(inplace=True))
-        else:
-            self.RCNN_top = nn.Sequential(nn.Dropout(), nn.Linear(1024 * 7 * 7, 2048))
-
-        self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
-        if self.class_agnostic:
-            self.RCNN_bbox_pred = nn.Linear(2048, 4)
-        else:
-            self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
-
-        # Fix blocks before last 2 Blocks
-        for layer in range(5):
+        # Fix Layers
+        for layer in range(len(self.RCNN_base)):
             for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
-        def set_bn_fix(m):
-            classname = m.__class__.__name__
-            if classname.find('BatchNorm') != -1:
-                for p in m.parameters(): p.requires_grad=False
+        if self.lighthead:
+            self.RCNN_top = nn.Sequential(nn.Linear(1280 * 7 * 7, 2048), nn.ReLU(inplace=True))
+        else:
+            self.RCNN_top = nn.Sequential(*list(mobilenet.features._modules.values())[-2:-1])
 
-        self.RCNN_base.apply(set_bn_fix)
-        self.RCNN_top.apply(set_bn_fix)
+        c_in = 2048 if self.lighthead else 1280
 
-    def train(self, mode=True):
-        # Override train so that the training mode is set as we want
-        nn.Module.train(self, mode)
-        if mode:
-            # Set fixed blocks to be in eval mode
-            self.RCNN_base.eval()
-            self.RCNN_base[5].train()
-            self.RCNN_base[6].train()
-
-        def set_bn_eval(m):
-            classname = m.__class__.__name__
-            if classname.find('BatchNorm') != -1:
-                m.eval()
-
-        self.RCNN_base.apply(set_bn_eval)
-        self.RCNN_top.apply(set_bn_eval)
+        self.RCNN_cls_score = nn.Linear(c_in, self.n_classes)
+        if self.class_agnostic:
+            self.RCNN_bbox_pred = nn.Linear(c_in, 4)
+        else:
+            self.RCNN_bbox_pred = nn.Linear(c_in, 4 * self.n_classes)
 
     def _head_to_tail(self, pool5):
-        pool5_flat = pool5.view(pool5.size(0), -1)
-        fc7 = self.RCNN_top(pool5_flat)    # or two large fully-connected layers
+        if self.lighthead:
+            pool5_flat = pool5.view(pool5.size(0), -1)
+            fc7 = self.RCNN_top(pool5_flat)    # or two large fully-connected layers
+        else:
+            fc7 = self.RCNN_top(pool5)
         return fc7

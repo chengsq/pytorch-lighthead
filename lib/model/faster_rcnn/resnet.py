@@ -223,6 +223,7 @@ class resnet(_fasterRCNN):
     self.dout_base_model = 1024
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
+    self.lighthead = lighthead
 
     _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
 
