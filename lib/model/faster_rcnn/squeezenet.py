@@ -66,6 +66,7 @@ class squeezenet(_fasterRCNN):
       self.RCNN_bbox_pred = nn.Linear(c_in, 4 * self.n_classes)
 
   def _head_to_tail(self, pool5):
-    pool5_flat = pool5.view(pool5.size(0), -1)
-    fc7 = self.RCNN_top(pool5_flat)
+    if self.lighthead:
+      pool5_flat = pool5.view(pool5.size(0), -1)
+      fc7 = self.RCNN_top(pool5_flat)
     return fc7

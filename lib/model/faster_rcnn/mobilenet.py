@@ -152,7 +152,7 @@ class mobilenetv2(_fasterRCNN):
         else:
             self.RCNN_top = nn.Sequential(*list(mobilenet.features._modules.values())[-2:-1])
 
-        c_in = 2048 if self.lighthead else 320
+        c_in = 2048 if self.lighthead else 1280*7*7
 
         self.RCNN_cls_score = nn.Linear(c_in, self.n_classes)
         if self.class_agnostic:
@@ -167,4 +167,5 @@ class mobilenetv2(_fasterRCNN):
         else:
             print(pool5.shape)
             fc7 = self.RCNN_top(pool5)
+            fc7 = fc7.view(fc7.size(0), -1)
         return fc7
