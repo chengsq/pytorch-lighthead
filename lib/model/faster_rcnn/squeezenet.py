@@ -69,4 +69,7 @@ class squeezenet(_fasterRCNN):
     if self.lighthead:
       pool5_flat = pool5.view(pool5.size(0), -1)
       fc7 = self.RCNN_top(pool5_flat)
+    else:
+      fc7 = self.RCNN_top(pool5)
+      fc7 = fc7.view(fc7.size(0), -1)
     return fc7

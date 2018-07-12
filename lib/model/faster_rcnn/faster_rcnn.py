@@ -35,6 +35,7 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
         self.rpn_time = None
+        self.pre_roi_time = None
         self.roi_pooling_time = None
         self.subnet_time = None
 
@@ -73,6 +74,9 @@ class _fasterRCNN(nn.Module):
 
         rois = Variable(rois)
 
+        pre_roi_time = time.time()
+        self.pre_roi_time = pre_roi_time - rpn_time
+
         # do roi pooling based on predicted rois
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
@@ -87,7 +91,7 @@ class _fasterRCNN(nn.Module):
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1, 5))
         roi_pool_time = time.time()
-        self.roi_pooling_time = roi_pool_time - rpn_time
+        self.roi_pooling_time = roi_pool_time - pre_roi_time
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
@@ -120,7 +124,7 @@ class _fasterRCNN(nn.Module):
 
         subnet_time = time.time()
         self.subnet_time = subnet_time - roi_pool_time
-        time_measure = [self.rpn_time, self.roi_pooling_time, self.subnet_time]
+        time_measure = [self.rpn_time, self.pre_roi_time, self.roi_pooling_time, self.subnet_time]
 
         return time_measure, rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
