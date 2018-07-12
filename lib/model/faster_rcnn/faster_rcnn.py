@@ -9,6 +9,7 @@ from model.rpn.proposal_target_layer_cascade import _ProposalTargetLayer
 from model.rpn.rpn import _RPN
 from model.utils.config import cfg
 from model.utils.net_utils import _smooth_l1_loss, _affine_grid_gen
+from model.utils.layer_utils import LargeSeparableConv2d
 from torch.autograd import Variable
 
 
@@ -31,6 +32,9 @@ class _fasterRCNN(nn.Module):
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
+
+        # Large Separable Conv
+        self.lsconv = LargeSeparableConv2d(self.dout_base_model, 490)       # ResNet Method 1) (1024, 490) // Method 2) (2048, 490)
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -74,6 +78,9 @@ class _fasterRCNN(nn.Module):
 
         rois = Variable(rois)
 
+        if self.lighthead:
+            base_feat = self.lsconv(base_feat)
+
         pre_roi_time = time.time()
         self.pre_roi_time = pre_roi_time - rpn_time
 
@@ -87,6 +94,7 @@ class _fasterRCNN(nn.Module):
             if cfg.CROP_RESIZE_WITH_MAX_POOL:
                 pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
         elif cfg.POOLING_MODE == 'align':
+            # pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
             pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1, 5))
@@ -94,6 +102,7 @@ class _fasterRCNN(nn.Module):
         self.roi_pooling_time = roi_pool_time - pre_roi_time
 
         # feed pooled features to top model
+        print(pooled_feat.shape)
         pooled_feat = self._head_to_tail(pooled_feat)
 
         # compute bbox offset
@@ -140,11 +149,7 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        if self.lighthead:
-            normal_init(self.RCNN_rpn.block1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-            normal_init(self.RCNN_rpn.block2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        else:
-            normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)

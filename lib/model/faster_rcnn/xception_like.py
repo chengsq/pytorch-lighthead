@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import print_function
 
 from model.utils.config import cfg
+from model.utils.layer_utils import _Block
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
 
 import math
@@ -23,62 +24,6 @@ from torch.nn import init
 import torch
 
 __all__ = ['xception']
-
-class SeparableConv2d(nn.Module):
-    def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):
-        super(SeparableConv2d,self).__init__()
-
-        self.conv1 = nn.Conv2d(in_channels,in_channels,kernel_size,stride,padding,dilation,groups=in_channels,bias=bias)
-        self.pointwise = nn.Conv2d(in_channels,out_channels,1,1,0,1,1,bias=bias)
-    
-    def forward(self,x):
-        x = self.conv1(x)
-        x = self.pointwise(x)
-        return x
-
-
-class Block(nn.Module):
-    def __init__(self,in_filters,out_filters,reps,strides=1,start_with_relu=True,grow_first=True):
-        super(Block, self).__init__()
-        
-        # Do not use pre-activation design (no identity mappings!)
-        self.relu = nn.ReLU(inplace=True)
-        rep=[]
-
-        filters=in_filters
-
-        if grow_first:
-            rep.append(self.relu)
-            rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
-            #rep.append(nn.Conv2d(in_filters, out_filters, 3, stride=strides, padding=1, groups=in_filters, bias=False))
-            rep.append(nn.BatchNorm2d(out_filters))
-            filters = out_filters
-
-        for i in range(reps-1):
-            rep.append(self.relu)
-            rep.append(SeparableConv2d(filters,filters,3,stride=1,padding=1,bias=False))
-            #rep.append(nn.Conv2d(filters, filters, 3, stride=1, padding=1, groups=filters, bias=False))
-            rep.append(nn.BatchNorm2d(filters))
-        
-        if not grow_first:
-            rep.append(self.relu)
-            rep.append(SeparableConv2d(in_filters,out_filters,3,stride=strides,padding=1,bias=False))
-            #rep.append(nn.Conv2d(in_filters, out_filters, 3, stride=strides, padding=1, groups=in_filters, bias=False))
-            rep.append(nn.BatchNorm2d(out_filters))
-
-        if not start_with_relu:
-            rep = rep[1:]
-        else:
-            rep[0] = nn.ReLU(inplace=False)
-
-        # Scaling already applied by stride
-        self.rep = nn.Sequential(*rep)
-
-    def forward(self,inp):
-        x = self.rep(inp)
-        
-        return x
-
 
 
 class Xception(nn.Module):
@@ -101,13 +46,13 @@ class Xception(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True)     # -> 56 x 56
 
         # Stage 2
-        self.block1=Block(24,144,1 + 3,2,start_with_relu=False,grow_first=True)     # -> 28 x 28
+        self.block1 = _Block(24,144,1 + 3,2,start_with_relu=False,grow_first=True)     # -> 28 x 28
 
         # Stage 3
-        self.block2=Block(144,288,1 + 7,2,start_with_relu=True,grow_first=True)     # -> 14 x 14
+        self.block2 = _Block(144,288,1 + 7,2,start_with_relu=True,grow_first=True)     # -> 14 x 14
 
         # Stage 4
-        self.block3=Block(288,576,1 + 3,2,start_with_relu=True,grow_first=True)     # -> 7 x 7
+        self.block3 = _Block(288,576,1 + 3,2,start_with_relu=True,grow_first=True)     # -> 7 x 7
 
         self.avgpool = nn.AvgPool2d(7)
         self.fc = nn.Linear(576, num_classes)
@@ -157,10 +102,10 @@ class xception(_fasterRCNN):
         xception = Xception()
 
         # Build xception-like network.
-        self.RCNN_base = nn.Sequential(xception.conv1, xception.bn1,xception.relu,
-            xception.maxpool,xception.block1,xception.block2,xception.block3)
+        self.RCNN_base = nn.Sequential(xception.conv1, xception.bn1,xception.relu, xception.maxpool,    # Conv1
+            xception.block1,xception.block2,xception.block3)
 
-        self.RCNN_top = nn.Sequential(nn.Linear(576 * 7 * 7, 2048), nn.ReLU(inplace=True))
+        self.RCNN_top = nn.Sequential(nn.Linear(490, 2048), nn.ReLU(inplace=True))
 
         self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
         if self.class_agnostic:
@@ -170,16 +115,8 @@ class xception(_fasterRCNN):
 
         # Fix blocks
         if self.pretrained:
-            for p in self.RCNN_base[0].parameters(): p.requires_grad=False
-            for p in self.RCNN_base[1].parameters(): p.requires_grad=False
-
-            assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
-            if cfg.RESNET.FIXED_BLOCKS >= 3:
-                for p in self.RCNN_base[6].parameters(): p.requires_grad=False
-            if cfg.RESNET.FIXED_BLOCKS >= 2:
-                for p in self.RCNN_base[5].parameters(): p.requires_grad=False
-            if cfg.RESNET.FIXED_BLOCKS >= 1:
-                for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+            for layer in range(len(self.RCNN_base)):
+                for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
             def set_bn_fix(m):
                 classname = m.__class__.__name__

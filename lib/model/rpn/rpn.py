@@ -23,33 +23,17 @@ class _RPN(nn.Module):
         self.anchor_ratios = cfg.ANCHOR_RATIOS
         self.feat_stride = cfg.FEAT_STRIDE[0]
         self.lighthead = lighthead
-        c_mid = 64 if setting == 'S' else 256
 
         # define the convrelu layers processing input feature map
-        if self.lighthead:
-            dim_out = 10 * 7 * 7
-            k_size = 15     # kernel_size
-            p_size = k_size // 2        # padding size
-            self.block1_1 = nn.Conv2d(self.din, c_mid, (k_size, 1), 1, padding=(p_size, 0))
-            self.bn1_1 = nn.BatchNorm2d(c_mid)
-            self.block1_2 = nn.Conv2d(c_mid, dim_out, (1, k_size), 1, padding=(0, p_size))
-            self.bn1_2 = nn.BatchNorm2d(dim_out)
-
-            self.block2_1 = nn.Conv2d(self.din, c_mid, (1, k_size), 1, padding=(0, p_size))
-            self.bn2_1 = nn.BatchNorm2d(c_mid)
-            self.block2_2 = nn.Conv2d(c_mid, dim_out, (k_size, 1), 1, padding=(p_size, 0))
-            self.bn2_2 = nn.BatchNorm2d(dim_out)
-        else:
-            dim_out = 512
-            self.RPN_Conv = nn.Conv2d(self.din, dim_out, 3, 1, 1, bias=True)
+        self.RPN_Conv = nn.Conv2d(self.din, 512, 3, 1, 1, bias=True)
 
         # define bg/fg classifcation score layer
         self.nc_score_out = len(self.anchor_scales) * len(self.anchor_ratios) * 2  # 2(bg/fg) * 9 (anchors)
-        self.RPN_cls_score = nn.Conv2d(dim_out, self.nc_score_out, 1, 1, 0)
+        self.RPN_cls_score = nn.Conv2d(512, self.nc_score_out, 1, 1, 0)
 
         # define anchor box offset prediction layer
         self.nc_bbox_out = len(self.anchor_scales) * len(self.anchor_ratios) * 4  # 4(coords) * 9 (anchors)
-        self.RPN_bbox_pred = nn.Conv2d(dim_out, self.nc_bbox_out, 1, 1, 0)
+        self.RPN_bbox_pred = nn.Conv2d(512, self.nc_bbox_out, 1, 1, 0)
 
         # define proposal layer
         self.RPN_proposal = _ProposalLayer(self.feat_stride, self.anchor_scales, self.anchor_ratios)
@@ -75,20 +59,7 @@ class _RPN(nn.Module):
         batch_size = base_feat.size(0)
 
         # return feature map after convrelu layer
-        if self.lighthead:
-            block1 = self.block1_1(base_feat)
-            block1 = F.relu(self.bn1_1(block1), inplace=True)
-            block1 = self.block1_2(block1)
-            block1 = F.relu(self.bn1_2(block1), inplace=True)
-
-            block2 = self.block2_1(base_feat)
-            block2 = F.relu(self.bn2_1(block2), inplace=True)
-            block2 = self.block2_2(block2)
-            block2 = F.relu(self.bn2_2(block2), inplace=True)
-
-            rpn_conv1 = block1 + block2
-        else:
-            rpn_conv1 = F.relu(self.RPN_Conv(base_feat), inplace=True)
+        rpn_conv1 = F.relu(self.RPN_Conv(base_feat), inplace=True)
         # get rpn classification score
         rpn_cls_score = self.RPN_cls_score(rpn_conv1)
 
