@@ -34,6 +34,10 @@ from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
+from model.faster_rcnn.xception_like import xception
+from model.faster_rcnn.squeezenet import squeezenet
+from model.faster_rcnn.mobilenet import mobilenetv2
+
 import pdb
 
 try:
@@ -61,7 +65,7 @@ def parse_args():
                       nargs=argparse.REMAINDER)
   parser.add_argument('--load_dir', dest='load_dir',
                       help='directory to load models',
-                      default="/srv/share/jyang375/models")
+                      default="./models")
   parser.add_argument('--image_dir', dest='image_dir',
                       help='directory to load images for demo',
                       default="images")
@@ -95,6 +99,11 @@ def parse_args():
   parser.add_argument('--webcam_num', dest='webcam_num',
                       help='webcam ID number',
                       default=-1, type=int)
+
+  # lighthead mode
+  parser.add_argument('--lighthead', dest='lighthead',
+                      help='whether to use light-head R-CNN',
+                      action='store_true')
 
   args = parser.parse_args()
   return args
@@ -151,6 +160,8 @@ if __name__ == '__main__':
 
   cfg.USE_GPU_NMS = args.cuda
 
+  lighthead = args.lighthead
+
   print('Using config:')
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
@@ -161,8 +172,15 @@ if __name__ == '__main__':
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
-  load_name = os.path.join(input_dir,
-    'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+  if args.lighthead:
+    load_name = os.path.join(input_dir,
+      'lighthead_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+  else:
+    load_name = os.path.join(input_dir,
+      'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+
+
+  device = torch.device("cuda" if args.cuda > 0 else "cpu")
 
   pascal_classes = np.asarray(['__background__',
                        'aeroplane', 'bicycle', 'bird', 'boat',
@@ -173,25 +191,34 @@ if __name__ == '__main__':
 
   # initilize the network here.
   if args.net == 'vgg16':
-    fasterRCNN = vgg16(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic)
+    _RCNN = vgg16(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res101':
-    fasterRCNN = resnet(pascal_classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
+    _RCNN = resnet(pascal_classes, 101, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res50':
-    fasterRCNN = resnet(pascal_classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
+    _RCNN = resnet(pascal_classes, 50, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res152':
-    fasterRCNN = resnet(pascal_classes, 152, pretrained=False, class_agnostic=args.class_agnostic)
+    _RCNN = resnet(pascal_classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'xception':
+    _RCNN = xception(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeeze1_0':
+    _RCNN = squeezenet(pascal_classes, version='1_0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'squeeze1_1':
+    _RCNN = squeezenet(pascal_classes, version='1_1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+  elif args.net == 'mobilenet':
+    _RCNN = mobilenetv2(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    
   else:
     print("network is not defined")
     pdb.set_trace()
 
-  fasterRCNN.create_architecture()
+  _RCNN.create_architecture()
 
   print("load checkpoint %s" % (load_name))
   if args.cuda > 0:
     checkpoint = torch.load(load_name)
   else:
     checkpoint = torch.load(load_name, map_location=(lambda storage, loc: storage))
-  fasterRCNN.load_state_dict(checkpoint['model'])
+  _RCNN.load_state_dict(checkpoint['model'])
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']
 
@@ -209,25 +236,24 @@ if __name__ == '__main__':
   gt_boxes = torch.FloatTensor(1)
 
   # ship to cuda
-  if args.cuda > 0:
-    im_data = im_data.cuda()
-    im_info = im_info.cuda()
-    num_boxes = num_boxes.cuda()
-    gt_boxes = gt_boxes.cuda()
+  im_data = im_data.to(device)
+  im_info = im_info.to(device)
+  num_boxes = num_boxes.to(device)
+  gt_boxes = gt_boxes.to(device)
 
-  # make variable
-  im_data = Variable(im_data, volatile=True)
-  im_info = Variable(im_info, volatile=True)
-  num_boxes = Variable(num_boxes, volatile=True)
-  gt_boxes = Variable(gt_boxes, volatile=True)
+  # make variable (PyTorch 0.4.0+)
+  with torch.no_grad():
+    im_data = Variable(im_data)     # volatile flag is now deprecated in PyTorch 0.4.0.
+    im_info = Variable(im_info)
+    num_boxes = Variable(num_boxes)
+    gt_boxes = Variable(gt_boxes)
 
   if args.cuda > 0:
     cfg.CUDA = True
 
-  if args.cuda > 0:
-    fasterRCNN.cuda()
+  _RCNN = _RCNN.to(device)
 
-  fasterRCNN.eval()
+  _RCNN.eval()
 
   start = time.time()
   max_per_image = 100
@@ -285,10 +311,11 @@ if __name__ == '__main__':
       # pdb.set_trace()
       det_tic = time.time()
 
+      time_measure, \
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label = _RCNN(im_data, im_info, gt_boxes, num_boxes)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
@@ -299,21 +326,13 @@ if __name__ == '__main__':
           if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
           # Optionally normalize targets by a precomputed mean and stdev
             if args.class_agnostic:
-                if args.cuda > 0:
-                    box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                else:
-                    box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(device) \
+                              + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(device)
 
                 box_deltas = box_deltas.view(1, -1, 4)
             else:
-                if args.cuda > 0:
-                    box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                else:
-                    box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(device) \
+                            + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(device)
                 box_deltas = box_deltas.view(1, -1, 4 * len(pascal_classes))
 
           pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
@@ -354,8 +373,8 @@ if __name__ == '__main__':
       nms_time = misc_toc - misc_tic
 
       if webcam_num == -1:
-          sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
-                           .format(num_images + 1, len(imglist), detect_time, nms_time))
+          sys.stdout.write('im_detect: {:03d}/{:03d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s\r' \
+                           .format(num_images + 1, len(imglist), detect_time, time_measure[0], time_measure[1], time_measure[2], time_measure[3], nms_time))
           sys.stdout.flush()
 
       if vis and webcam_num == -1:

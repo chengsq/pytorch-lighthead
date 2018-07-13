@@ -358,7 +358,7 @@ if __name__ == '__main__':
       misc_toc = time.time()
       nms_time = misc_toc - misc_tic
 
-      sys.stdout.write('im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s   \r' \
+      sys.stdout.write('im_detect: {:d}/{:d}\tDetect: {:.3f}s (RPN: {:.3f}s, Pre-RoI: {:.3f}s, RoI: {:.3f}s, Subnet: {:.3f}s)\tNMS: {:.3f}s\r' \
           .format(i + 1, num_images, detect_time, time_measure[0], time_measure[1], time_measure[2], time_measure[3], nms_time))
       sys.stdout.flush()
 
