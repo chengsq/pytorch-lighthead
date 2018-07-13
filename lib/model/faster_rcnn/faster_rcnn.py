@@ -84,8 +84,8 @@ class _fasterRCNN(nn.Module):
         if self.lighthead:
             try:
                 base_feat = self.lighthead_base(base_feat)
-            except:
-                print("Using compact backbone network")
+            except Exception:
+                pass
             base_feat = self.lsconv(base_feat)
 
         pre_roi_time = time.time()

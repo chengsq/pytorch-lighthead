@@ -174,8 +174,12 @@ if __name__ == '__main__':
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
-  load_name = os.path.join(input_dir,
-    'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+  if args.lighthead:
+    load_name = os.path.join(input_dir,
+      'lighthead_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+  else:
+    load_name = os.path.join(input_dir,
+      'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   # (PyTorch 0.4.0 Feature) Auto GPU/CPU management
   device = torch.device("cuda" if args.cuda else "cpu")

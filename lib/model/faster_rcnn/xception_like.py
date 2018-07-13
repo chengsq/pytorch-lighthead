@@ -46,13 +46,13 @@ class Xception(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True)     # -> 56 x 56
 
         # Stage 2
-        self.block1 = _Block(24,144,1 + 3,2,start_with_relu=False,grow_first=True)     # -> 28 x 28
+        self.block1 = _Block(24, 144, 1+3, 2, start_with_relu=False, grow_first=True)     # -> 28 x 28
 
         # Stage 3
-        self.block2 = _Block(144,288,1 + 7,2,start_with_relu=True,grow_first=True)     # -> 14 x 14
+        self.block2 = _Block(144, 288, 1+7, 2, start_with_relu=True, grow_first=True)     # -> 14 x 14
 
         # Stage 4
-        self.block3 = _Block(288,576,1 + 3,2,start_with_relu=True,grow_first=True)     # -> 7 x 7
+        self.block3 = _Block(288, 576, 1+3, 2, start_with_relu=True, grow_first=True)     # -> 7 x 7
 
         self.avgpool = nn.AvgPool2d(7)
         self.fc = nn.Linear(576, num_classes)
@@ -102,6 +102,15 @@ class xception(_fasterRCNN):
     def _init_modules(self):
         xception = Xception()
 
+        # Check pretrained
+        if self.pretrained == True:
+            print("Loading pretrained weights from %s" %(self.model_path))
+            if torch.cuda.is_available():
+                state_dict = torch.load(self.model_path)
+            else:
+                state_dict = torch.load(self.model_path, map_location=lambda storage, loc: storage)
+            xception.load_state_dict({k:v for k,v in state_dict.items() if k in xception.state_dict()})
+
         # Build xception-like network.
         self.RCNN_base = nn.Sequential(xception.conv1, xception.bn1,xception.relu, xception.maxpool,    # Conv1
             xception.block1,xception.block2,xception.block3)
@@ -118,14 +127,6 @@ class xception(_fasterRCNN):
         if self.pretrained:
             for layer in range(len(self.RCNN_base)):
                 for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
-
-            def set_bn_fix(m):
-                classname = m.__class__.__name__
-                if classname.find('BatchNorm') != -1:
-                    for p in m.parameters(): p.requires_grad=False
-
-            self.RCNN_base.apply(set_bn_fix)
-            self.RCNN_top.apply(set_bn_fix)
             
     def _head_to_tail(self, pool5):
         pool5 = pool5.view(pool5.size(0), -1)

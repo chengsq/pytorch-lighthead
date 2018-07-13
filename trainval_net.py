@@ -308,7 +308,11 @@ if __name__ == '__main__':
         optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
 
     if args.resume:
-        load_name = os.path.join(output_dir,
+        if args.lighthead:
+            load_name = os.path.join(output_dir,
+                                 'lighthead_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+        else:
+            load_name = os.path.join(output_dir,
                                  'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
         print("loading checkpoint %s" % (load_name))
         checkpoint = torch.load(load_name)
@@ -408,7 +412,10 @@ if __name__ == '__main__':
                 start = time.time()
 
         if args.mGPUs:
-            save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+            if args.lighthead:
+                save_name = os.path.join(output_dir, 'lighthead_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+            else:
+                save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
             save_checkpoint({
                 'session': args.session,
                 'epoch': epoch + 1,
@@ -418,7 +425,10 @@ if __name__ == '__main__':
                 'class_agnostic': args.class_agnostic,
             }, save_name)
         else:
-            save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+            if args.lighthead:
+                save_name = os.path.join(output_dir, 'lighthead_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+            else:
+                save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
             save_checkpoint({
                 'session': args.session,
                 'epoch': epoch + 1,
