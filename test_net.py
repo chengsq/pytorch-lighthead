@@ -186,34 +186,34 @@ if __name__ == '__main__':
 
   # initilize the network here.
   if args.net == 'vgg16':
-    fasterRCNN = vgg16(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = vgg16(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res101':
-    fasterRCNN = resnet(imdb.classes, 101, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = resnet(imdb.classes, 101, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res50':
-    fasterRCNN = resnet(imdb.classes, 50, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = resnet(imdb.classes, 50, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'res152':
-    fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'xception':
-    fasterRCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = xception(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'squeeze1_0':
-    fasterRCNN = squeezenet(imdb.classes, version='1_0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = squeezenet(imdb.classes, version='1_0', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'squeeze1_1':
-    fasterRCNN = squeezenet(imdb.classes, version='1_1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = squeezenet(imdb.classes, version='1_1', pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
   elif args.net == 'mobilenet':
-    fasterRCNN = mobilenetv2(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
+    _RCNN = mobilenetv2(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic, lighthead=lighthead)
 
   else:
     print("network is not defined")
     pdb.set_trace()
 
-  fasterRCNN.create_architecture()
+  _RCNN.create_architecture()
 
   print("load checkpoint %s" % (load_name))
   if args.cuda:
     checkpoint = torch.load(load_name)
   else:
     checkpoint = torch.load(load_name, map_location=lambda storage, loc: storage)    # Load all tensors onto the CPU
-  fasterRCNN.load_state_dict(checkpoint['model'])
+  _RCNN.load_state_dict(checkpoint['model'])
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']
 
@@ -240,7 +240,7 @@ if __name__ == '__main__':
   if args.cuda:
     cfg.CUDA = True
 
-  fasterRCNN = fasterRCNN.to(device)
+  _RCNN = _RCNN.to(device)
   
   start = time.time()
   max_per_image = 100
@@ -269,7 +269,7 @@ if __name__ == '__main__':
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
 
-  fasterRCNN.eval()
+  _RCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
   for i in range(num_images):
 
@@ -284,7 +284,7 @@ if __name__ == '__main__':
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label = _RCNN(im_data, im_info, gt_boxes, num_boxes)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]

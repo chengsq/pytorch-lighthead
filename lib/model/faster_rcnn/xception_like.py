@@ -93,10 +93,11 @@ class Xception(nn.Module):
 class xception(_fasterRCNN):
     def __init__(self, classes, pretrained=False, class_agnostic=False, lighthead=True):
         self.dout_base_model = 576      # Output channel at Stage4
+        self.dout_lh_base_model = 576
         self.class_agnostic = class_agnostic
         self.pretrained = pretrained
 
-        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, setting='S')
+        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, compact_mode=True)
 
     def _init_modules(self):
         xception = Xception()
@@ -105,7 +106,7 @@ class xception(_fasterRCNN):
         self.RCNN_base = nn.Sequential(xception.conv1, xception.bn1,xception.relu, xception.maxpool,    # Conv1
             xception.block1,xception.block2,xception.block3)
 
-        self.RCNN_top = nn.Sequential(nn.Linear(490, 2048), nn.ReLU(inplace=True))
+        self.RCNN_top = nn.Sequential(nn.Linear(490 * 7 * 7, 2048), nn.ReLU(inplace=True))
 
         self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
         if self.class_agnostic:
@@ -125,24 +126,7 @@ class xception(_fasterRCNN):
 
             self.RCNN_base.apply(set_bn_fix)
             self.RCNN_top.apply(set_bn_fix)
-
-    def train(self, mode=True):
-        # Override train so that the training mode is set as we want
-        nn.Module.train(self, mode)
-        if mode:
-        # Set fixed blocks to be in eval mode
-            self.RCNN_base.eval()
-            self.RCNN_base[5].train()
-            self.RCNN_base[6].train()
-
-            def set_bn_eval(m):
-                classname = m.__class__.__name__
-                if classname.find('BatchNorm') != -1:
-                    m.eval()
-
-            self.RCNN_base.apply(set_bn_eval)
-            self.RCNN_top.apply(set_bn_eval)
-
+            
     def _head_to_tail(self, pool5):
         pool5 = pool5.view(pool5.size(0), -1)
         fc7 = self.RCNN_top(pool5)   # or two large fully-connected layers

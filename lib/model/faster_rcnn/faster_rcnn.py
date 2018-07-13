@@ -16,7 +16,7 @@ from torch.autograd import Variable
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
 
-    def __init__(self, classes, class_agnostic, lighthead, setting='L'):
+    def __init__(self, classes, class_agnostic, lighthead=False, compact_mode=False):
         super(_fasterRCNN, self).__init__()
         self.classes = classes
         self.n_classes = len(classes)
@@ -27,14 +27,16 @@ class _fasterRCNN(nn.Module):
         self.RCNN_loss_cls = 0
         self.RCNN_loss_bbox = 0
 
+        # define Large Separable Convolution Layer
+        if self.lighthead:
+            self.lh_mode = 'S' if compact_mode else 'L'
+            self.lsconv = LargeSeparableConv2d(self.dout_lh_base_model, bn=False, setting=self.lh_mode)
+
         # define rpn
-        self.RCNN_rpn = _RPN(self.dout_base_model, self.lighthead, setting=setting)
+        self.RCNN_rpn = _RPN(self.dout_base_model)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
-
-        # Large Separable Conv
-        self.lsconv = LargeSeparableConv2d(self.dout_base_model, 490)       # ResNet Method 1) (1024, 490) // Method 2) (2048, 490)
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -78,7 +80,12 @@ class _fasterRCNN(nn.Module):
 
         rois = Variable(rois)
 
+        # Large Separable Conv
         if self.lighthead:
+            try:
+                base_feat = self.lighthead_base(base_feat)
+            except:
+                print("Using compact backbone network")
             base_feat = self.lsconv(base_feat)
 
         pre_roi_time = time.time()
@@ -102,7 +109,6 @@ class _fasterRCNN(nn.Module):
         self.roi_pooling_time = roi_pool_time - pre_roi_time
 
         # feed pooled features to top model
-        print(pooled_feat.shape)
         pooled_feat = self._head_to_tail(pooled_feat)
 
         # compute bbox offset

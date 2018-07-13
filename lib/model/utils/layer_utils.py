@@ -81,7 +81,7 @@ class Bottleneck(nn.Module):
 
 
 class LargeSeparableConv2d(nn.Module):
-  def __init__(self, c_in, kernel_size=15, bn=True, setting='L'):
+  def __init__(self, c_in, kernel_size=15, bn=False, setting='L'):
     super(LargeSeparableConv2d, self).__init__()
     
     dim_out = 10 * 7 * 7    

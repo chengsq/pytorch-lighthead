@@ -15,14 +15,13 @@ from .proposal_layer import _ProposalLayer
 class _RPN(nn.Module):
     """ region proposal network """
 
-    def __init__(self, din, lighthead, setting='L'):
+    def __init__(self, din):
         super(_RPN, self).__init__()
 
         self.din = din  # get depth of input feature map, e.g., 512
         self.anchor_scales = cfg.ANCHOR_SCALES
         self.anchor_ratios = cfg.ANCHOR_RATIOS
         self.feat_stride = cfg.FEAT_STRIDE[0]
-        self.lighthead = lighthead
 
         # define the convrelu layers processing input feature map
         self.RPN_Conv = nn.Conv2d(self.din, 512, 3, 1, 1, bias=True)

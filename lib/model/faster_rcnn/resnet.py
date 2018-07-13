@@ -148,7 +148,9 @@ class resnet(_fasterRCNN):
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
     self.lighthead = lighthead
-    self.dout_base_model = 2048 if self.lighthead else 1024
+    self.dout_base_model = 1024
+    if self.lighthead:
+      self.dout_lh_base_model = 2048
 
     _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
 
@@ -165,16 +167,13 @@ class resnet(_fasterRCNN):
 
     # Build resnet.
     # Method 1) base: ~conv4 layer, top: conv5 block
-    # Method 2) base: ~conv5 layer, top: FC * 2
-    if self.lighthead:
-      self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
-        resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3, resnet.layer4)
-    else:
-      self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
+    # Method 2) base: ~conv5 layer, top: FC * 2    >> Need massive amount of memory
+    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
         resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     if self.lighthead:
-      self.RCNN_top = nn.Sequential(nn.Linear(490, 2048), nn.ReLU(inplace=True))
+      self.lighthead_base = nn.Sequential(resnet.layer4)
+      self.RCNN_top = nn.Sequential(nn.Linear(490 * 7 * 7, 2048), nn.ReLU(inplace=True))    # 490 channels input into FC layer
     else:
       self.RCNN_top = nn.Sequential(resnet.layer4)
 
@@ -189,6 +188,9 @@ class resnet(_fasterRCNN):
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
 
     assert (0 <= cfg.RESNET.FIXED_BLOCKS < 5 if self.lighthead else 4)
+    if self.lighthead:
+      if cfg.RESNET.FIXED_BLOCKS >= 4:
+        for p in self.RCNN_base[7].parameters(): p.requires_grad=False
     if cfg.RESNET.FIXED_BLOCKS >= 3:
       for p in self.RCNN_base[6].parameters(): p.requires_grad=False
     if cfg.RESNET.FIXED_BLOCKS >= 2:
@@ -223,8 +225,8 @@ class resnet(_fasterRCNN):
 
   def _head_to_tail(self, pool5):
     if self.lighthead:
+      pool5 = pool5.view(pool5.size(0), -1)
       fc7 = self.RCNN_top(pool5)
-      # fc7 = fc7.view(fc7.size(0), -1)
     else:
       fc7 = self.RCNN_top(pool5).mean(3).mean(2)    # or two large fully-connected layers
     return fc7
