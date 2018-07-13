@@ -152,7 +152,7 @@ class resnet(_fasterRCNN):
     if self.lighthead:
       self.dout_lh_base_model = 2048
 
-    _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
+    _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, compact_mode=False)
 
   def _init_modules(self):
     resnet = resnet101()
@@ -177,7 +177,9 @@ class resnet(_fasterRCNN):
     else:
       self.RCNN_top = nn.Sequential(resnet.layer4)
 
+    # Prediction
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+
     if self.class_agnostic:
       self.RCNN_bbox_pred = nn.Linear(2048, 4)
     else:

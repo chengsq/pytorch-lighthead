@@ -12,54 +12,9 @@ from torch.autograd import Variable
 import math
 import torch.utils.model_zoo as model_zoo
 import pdb
+from model.utils.layer_utils import conv_1x1_bn, conv_bn, InvertedResidual
 
 __all__ = ['mobilenetv2']
-
-
-
-def conv_bn(inp, oup, stride):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup),
-        nn.ReLU6(inplace=True)
-    )
-
-
-def conv_1x1_bn(inp, oup):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
-        nn.ReLU6(inplace=True)
-    )
-
-
-class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio):
-        super(InvertedResidual, self).__init__()
-        self.stride = stride
-
-        self.use_res_connect = self.stride == 1 and inp == oup
-
-        self.conv = nn.Sequential(
-            # pw
-            nn.Conv2d(inp, inp * expand_ratio, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
-            nn.ReLU6(inplace=True),
-            # dw
-            nn.Conv2d(inp * expand_ratio, inp * expand_ratio, 3, stride, 1, groups=inp * expand_ratio, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
-            nn.ReLU6(inplace=True),
-            # pw-linear
-            nn.Conv2d(inp * expand_ratio, oup, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(oup),
-        )
-
-    def forward(self, x):
-        if self.use_res_connect:
-            return x + self.conv(x)
-        else:
-            return self.conv(x)
-
 
 
 class MobileNetV2(nn.Module):
@@ -115,11 +70,14 @@ class MobileNetV2(nn.Module):
 class mobilenetv2(_fasterRCNN):
     def __init__(self, classes, pretrained=False, class_agnostic=False, lighthead=False):
         self.model_path = 'data/pretrained_model/mobilenet_v2.pth.tar'
-        self.dout_base_model = 320
         self.pretrained = pretrained
         self.class_agnostic = class_agnostic
+        self.lighthead = lighthead
+        self.dout_base_model = 320
+        if self.lighthead:
+            self.dout_lh_base_model = 1280
 
-        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead)
+        _fasterRCNN.__init__(self, classes, class_agnostic, lighthead, compact_mode=False)
 
     def _init_modules(self):
         mobilenet = MobileNetV2()
@@ -131,26 +89,23 @@ class mobilenetv2(_fasterRCNN):
             else:
                 state_dict = torch.load(self.model_path, map_location=lambda storage, loc: storage)
 
-            from collections import OrderedDict
-            new_state_dict = OrderedDict()
-            for k,v in state_dict.items():
-                name = k[7:]        # remove 'module.'
-                new_state_dict[name] = v
+            mobilenet.load_state_dict({k:v for k,v in state_dict.items() if k in mobilenet.state_dict()})
 
-            mobilenet.load_state_dict({k:v for k,v in new_state_dict.items() if k in mobilenet.state_dict()})
-
+        mobilenet.classifier = nn.Sequential(*list(mobilenet.features._modules.values())[-2:-1])
         
         # Build mobilenet.
         self.RCNN_base = nn.Sequential(*list(mobilenet.features._modules.values())[:-2])
 
         # Fix Layers
-        for layer in range(len(self.RCNN_base)):
-            for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
+        if self.pretrained:
+            for layer in range(len(self.RCNN_base)):
+                for p in self.RCNN_base[layer].parameters(): p.requires_grad = False
 
         if self.lighthead:
-            self.RCNN_top = nn.Sequential(nn.Linear(320 * 7 * 7, 2048), nn.ReLU(inplace=True))
+            self.lighthead_base = mobilenet.classifier
+            self.RCNN_top = nn.Sequential(nn.Linear(490 * 7 * 7, 2048), nn.ReLU(inplace=True))
         else:
-            self.RCNN_top = nn.Sequential(*list(mobilenet.features._modules.values())[-2:-1])
+            self.RCNN_top = mobilenet.classifier
 
         c_in = 2048 if self.lighthead else 1280*7*7
 
