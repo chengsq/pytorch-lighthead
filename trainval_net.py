@@ -46,9 +46,15 @@ def parse_args():
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
                         default='pascal_voc', type=str)
+    parser.add_argument('--cfg', dest='cfg_file',
+                      help='optional config file',
+                      default='cfgs/res101_ls.yml', type=str)
     parser.add_argument('--net', dest='net',
                         help='vgg16, res101',
                         default='res101', type=str)
+    parser.add_argument('--set', dest='set_cfgs',
+                      help='set config keys', default=None,
+                      nargs=argparse.REMAINDER)
     parser.add_argument('--start_epoch', dest='start_epoch',
                         help='starting epoch',
                         default=1, type=int)
