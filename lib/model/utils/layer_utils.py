@@ -138,7 +138,7 @@ class LargeSeparableConv2d(nn.Module):
     self.c_mid = c_mid
     self.c_out = dim_out
     self.kernel_size = kernel_size
-    self.pad_size = self.kernel_size // 2
+    self.pad_size = int((self.kernel_size-1) / 2)
     self.bn = bn
 
     self.block1_1 = nn.Conv2d(self.din, self.c_mid, (self.kernel_size, 1), 1, padding=(self.pad_size, 0))
