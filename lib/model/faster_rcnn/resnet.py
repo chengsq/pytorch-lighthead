@@ -179,7 +179,6 @@ class resnet(_fasterRCNN):
 
     # Prediction
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
-
     if self.class_agnostic:
       self.RCNN_bbox_pred = nn.Linear(2048, 4)
     else:
