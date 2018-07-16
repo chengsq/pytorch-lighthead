@@ -31,6 +31,7 @@ class _fasterRCNN(nn.Module):
         if self.lighthead:
             self.lh_mode = 'S' if compact_mode else 'L'
             self.lsconv = LargeSeparableConv2d(self.dout_lh_base_model, bn=False, setting=self.lh_mode)
+            self.lh_relu = nn.ReLU(inplace=True)
 
         # define rpn
         self.RCNN_rpn = _RPN(self.dout_base_model)
@@ -87,6 +88,7 @@ class _fasterRCNN(nn.Module):
             except Exception:
                 pass
             base_feat = self.lsconv(base_feat)
+            base_feat = self.lh_relu(base_feat)
 
         pre_roi_time = time.time()
         self.pre_roi_time = pre_roi_time - rpn_time
