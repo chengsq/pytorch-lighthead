@@ -29,7 +29,8 @@ class _fasterRCNN(nn.Module):
         # define Large Separable Convolution Layer
         if self.lighthead:
             self.lh_mode = 'S' if compact_mode else 'L'
-            self.lsconv = LargeSeparableConv2d(self.dout_lh_base_model, bn=False, setting=self.lh_mode)
+            self.lsconv = LargeSeparableConv2d(
+                self.dout_lh_base_model, bias=False, bn=False, setting=self.lh_mode)
             self.lh_relu = nn.ReLU(inplace=True)
 
         # define rpn
@@ -132,6 +133,8 @@ class _fasterRCNN(nn.Module):
 
             # bounding box regression L1 loss
             RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
+            if self.lighthead:
+                RCNN_loss_bbox = RCNN_loss_bbox * 2    # "to balance multi-task training"
 
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
