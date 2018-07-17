@@ -128,7 +128,7 @@ class Bottleneck(nn.Module):
 
 
 class LargeSeparableConv2d(nn.Module):
-  def __init__(self, c_in, kernel_size=15, bn=False, setting='L'):
+  def __init__(self, c_in, kernel_size=15, bias=False, bn=False, setting='L'):
     super(LargeSeparableConv2d, self).__init__()
     
     dim_out = 10 * 7 * 7    
@@ -140,16 +140,17 @@ class LargeSeparableConv2d(nn.Module):
     self.k_width = (kernel_size, 1)
     self.k_height = (1, kernel_size)
     self.pad = 0
+    self.bias = bias
     self.bn = bn
 
-    self.block1_1 = nn.Conv2d(self.din, self.c_mid, self.k_width, 1, padding=self.pad)
+    self.block1_1 = nn.Conv2d(self.din, self.c_mid, self.k_width, 1, padding=self.pad, bias=self.bias)
     self.bn1_1 = nn.BatchNorm2d(self.c_mid)
-    self.block1_2 = nn.Conv2d(self.c_mid, self.c_out, self.k_height, 1, padding=self.pad)
+    self.block1_2 = nn.Conv2d(self.c_mid, self.c_out, self.k_height, 1, padding=self.pad, bias=self.bias)
     self.bn1_2 = nn.BatchNorm2d(self.c_out)
 
-    self.block2_1 = nn.Conv2d(self.din, self.c_mid, self.k_height, 1, padding=self.pad)
+    self.block2_1 = nn.Conv2d(self.din, self.c_mid, self.k_height, 1, padding=self.pad, bias=self.bias)
     self.bn2_1 = nn.BatchNorm2d(self.c_mid)
-    self.block2_2 = nn.Conv2d(self.c_mid, self.c_out, self.k_width, 1, padding=self.pad)
+    self.block2_2 = nn.Conv2d(self.c_mid, self.c_out, self.k_width, 1, padding=self.pad, bias=self.bias)
     self.bn2_2 = nn.BatchNorm2d(self.c_out)
 
   def forward(self, x):
