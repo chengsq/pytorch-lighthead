@@ -138,17 +138,17 @@ class LargeSeparableConv2d(nn.Module):
     self.c_mid = c_mid
     self.c_out = dim_out
     self.kernel_size = kernel_size
-    # self.pad_size = int((self.kernel_size-1) / 2)
+    self.pad_size = int((self.kernel_size-1) / 2)
     self.bn = bn
 
-    self.block1_1 = nn.Conv2d(self.din, self.c_mid, (self.kernel_size, 1), 1, 0)
+    self.block1_1 = nn.Conv2d(self.din, self.c_mid, (self.kernel_size, 1), 1, padding=(self.pad_size, 0))
     self.bn1_1 = nn.BatchNorm2d(self.c_mid)
-    self.block1_2 = nn.Conv2d(self.c_mid, self.c_out, (1, self.kernel_size), 1, 0)
+    self.block1_2 = nn.Conv2d(self.c_mid, self.c_out, (1, self.kernel_size), 1, padding=(0, self.pad_size))
     self.bn1_2 = nn.BatchNorm2d(self.c_out)
 
-    self.block2_1 = nn.Conv2d(self.din, self.c_mid, (1, self.kernel_size), 1, 0)
+    self.block2_1 = nn.Conv2d(self.din, self.c_mid, (1, self.kernel_size), 1, padding=(0, self.pad_size))
     self.bn2_1 = nn.BatchNorm2d(self.c_mid)
-    self.block2_2 = nn.Conv2d(self.c_mid, self.c_out, (self.kernel_size, 1), 1, 0)
+    self.block2_2 = nn.Conv2d(self.c_mid, self.c_out, (self.kernel_size, 1), 1, padding=(self.pad_size, 0))
     self.bn2_2 = nn.BatchNorm2d(self.c_out)
 
   def forward(self, x):

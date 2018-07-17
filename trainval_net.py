@@ -446,4 +446,4 @@ if __name__ == '__main__':
         print('save model: {}'.format(save_name))
 
         end = time.time()
-        print(end - start)
+        print("Average time per iter: {}".format(end - start))
